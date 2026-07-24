@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Install Virtualization Tools
         run: |
@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache VMware ovftool
         id: cache-ovftool
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: ovftool_dir
           key: ovftool-linux-${{ runner.os }}-v1
@@ -61,7 +61,7 @@ jobs:
 
       - name: Cache Base Photon OVA
         id: cache-photon-ova
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         with:
           path: base-photon.ova
           # The cache key is bound to the version, build, and hash. 
@@ -122,7 +122,7 @@ jobs:
           ovftool --lax "$OVF_FILE" custom-photon5.ova
 
       - name: Upload to GitHub Releases
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v3.0.2
         with:
           files: build-dir/custom-photon5.ova
           draft: true
