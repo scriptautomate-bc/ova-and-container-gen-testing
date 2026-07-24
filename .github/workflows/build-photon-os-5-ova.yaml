@@ -22,8 +22,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget
-          # Fix Ubuntu kernel permissions so supermin can build the guestfs appliance
+
+          # FIX 1: Remove 'passt' to force libguestfs to use the reliable 'slirp' networking backend.
+          # This entirely bypasses the AppArmor and "nobody" permission dropping crashes.
+          sudo apt-get purge -y passt
+
+          # Fix Ubuntu kernel permissions
           sudo chmod 644 /boot/vmlinuz-*
+
+          # FIX 2: Grant the GHA runner direct access to KVM hardware acceleration.
+          # This resolves the "user is not a member of the KVM group" warning and speeds up the build.
+          sudo chmod 0666 /dev/kvm
 
       - name: Cache VMware ovftool
         id: cache-ovftool
@@ -73,7 +82,6 @@ jobs:
 
       - name: Extract OVA & Customize Disk
         env:
-          # Enable maximum debug logging for libguestfs as requested
           LIBGUESTFS_DEBUG: 1
           LIBGUESTFS_TRACE: 1
         run: |
@@ -83,21 +91,13 @@ jobs:
 
           VMDK_FILE=$(ls *.vmdk)
 
+          # Convert to raw format for native manipulation
           qemu-img convert -f vmdk -O raw "$VMDK_FILE" disk.raw
-
-          # --- UBUNTU 24.04 HOST FIXES ---
-          # 1. Disable the unprivileged user namespace restriction. 
-          # This allows 'passt' to create its network sandbox without crashing.
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-
-          # 2. Grant the GHA runner direct access to KVM hardware acceleration.
-          sudo chmod 0666 /dev/kvm
 
           export LIBGUESTFS_BACKEND=direct
 
-          # Run normally without sudo.
-          # Added -v and -x flags for verbose debugging if 'passt' still fails.
-          virt-customize -v -x -a disk.raw \
+          # We can run this normally without sudo now, and without the debug flags.
+          virt-customize -a disk.raw \
             --network \
             --run-command "tdnf update -y && tdnf install git jq -y" \
             --install "docker,git,tar" \
@@ -105,6 +105,7 @@ jobs:
             --run-command "echo 'Custom Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123!
 
+          # Convert back to standard VMDK
           rm "$VMDK_FILE"
           qemu-img convert -f raw -O vmdk disk.raw "$VMDK_FILE"
           rm disk.raw
