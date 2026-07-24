@@ -1,0 +1,103 @@
+name: Build and Release Custom Photon OS 5 OVA
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Triggers on version tags e.g., v1.0.0
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  build-ova:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Virtualization Tools
+        run: |
+          sudo apt-get update
+          # libguestfs allows disk modification without booting a VM
+          # qemu-utils provides qemu-img for disk format conversion
+          sudo apt-get install -y qemu-utils libguestfs-tools tar wget python3
+
+      - name: Download Official Photon OS 5 OVA
+        run: |
+          # Fetch the official Photon OS 5 OVA
+          wget https://packages.vmware.com/photon/5.0/GA/ova/photon-hw15-5.0-dde71ec57.x86_64.ova -O base-photon.ova
+
+      - name: Extract OVA and Prepare Disk
+        run: |
+          mkdir build-dir
+          tar -xvf base-photon.ova -C build-dir
+          
+          cd build-dir
+          OVF_FILE=$(ls *.ovf)
+          VMDK_FILE=$(ls *.vmdk)
+          
+          # VMware OVAs use streamOptimized VMDKs, which can't be easily modified in place.
+          # We convert it to a standard raw disk first.
+          qemu-img convert -f vmdk -O raw "$VMDK_FILE" disk.raw
+          
+          # Pass filenames to next steps via GHA environment
+          echo "OVF_FILE=$OVF_FILE" >> $GITHUB_ENV
+          echo "VMDK_FILE=$VMDK_FILE" >> $GITHUB_ENV
+
+      - name: Customize Photon OS Image
+        run: |
+          cd build-dir
+          # By default, libguestfs tries to use KVM. 
+          # GitHub standard runners don't support KVM, so we force direct software mode.
+          export LIBGUESTFS_BACKEND=direct
+          
+          # virt-customize creates a chroot-like environment inside the raw disk.
+          # Add your custom packages, scripts, and configuration here.
+          virt-customize -a disk.raw \
+            --run-command "tdnf update -y && tdnf install git jq -y" \
+            --install "docker,git,tar" \
+            --run-command "systemctl enable docker" \
+            --run-command "echo 'Custom Photon OS 5 Build' > /etc/motd" \
+            --root-password password:changeme123!
+
+      - name: Repackage VMDK
+        run: |
+          cd build-dir
+          rm "$VMDK_FILE"
+          
+          # Convert the raw disk back into a VMware-compatible streamOptimized VMDK
+          qemu-img convert -f raw -O vmdk -o subformat=streamOptimized disk.raw "$VMDK_FILE"
+          rm disk.raw
+
+      - name: Update OVF and Create Manifest
+        run: |
+          cd build-dir
+          # The new VMDK has a different byte size. The .ovf XML descriptor MUST be updated
+          # to match the new exact file size, or VMware Fusion/Workstation will reject it.
+          NEW_SIZE=$(stat -c%s "$VMDK_FILE")
+          
+          # Inline python script to safely update the ovf:size attribute for the disk
+          python3 -c "
+          import re, sys
+          with open(sys.argv[1], 'r') as f: content = f.read()
+          content = re.sub(r'(<File[^>]*ovf:href=\"' + sys.argv[2] + r'\"[^>]*ovf:size=\")[0-9]+(\")', r'\g<1>' + sys.argv[3] + r'\2', content)
+          with open(sys.argv[1], 'w') as f: f.write(content)
+          " "$OVF_FILE" "$VMDK_FILE" "$NEW_SIZE"
+
+          # Create a new manifest (.mf) file with updated SHA256 checksums
+          MF_FILE="${OVF_FILE%.ovf}.mf"
+          rm -f *.mf
+          echo "SHA256(${OVF_FILE})= $(sha256sum ${OVF_FILE} | awk '{print $1}')" > "$MF_FILE"
+          echo "SHA256(${VMDK_FILE})= $(sha256sum ${VMDK_FILE} | awk '{print $1}')" >> "$MF_FILE"
+          
+          echo "MF_FILE=$MF_FILE" >> $GITHUB_ENV
+
+      - name: Create Custom OVA Archive
+        run: |
+          cd build-dir
+          # The DMTF standard strictly requires the OVF to be the first file in the tar archive
+          tar -cvf custom-photon5.ova "$OVF_FILE" "$MF_FILE" "$VMDK_FILE"
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v3
+        with:
+          files: build-dir/custom-photon5.ova
+          draft: true # Set to false to publish immediately
