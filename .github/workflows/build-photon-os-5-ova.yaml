@@ -72,22 +72,32 @@ jobs:
           echo "${PHOTON_SHA512}  base-photon.ova" | sha512sum -c -
 
       - name: Extract OVA & Customize Disk
+        env:
+          # Enable maximum debug logging for libguestfs as requested
+          LIBGUESTFS_DEBUG: 1
+          LIBGUESTFS_TRACE: 1
         run: |
           mkdir build-dir
           tar -xvf base-photon.ova -C build-dir
           cd build-dir
-          
+
           VMDK_FILE=$(ls *.vmdk)
-          
-          # Convert to raw format for native manipulation
+
           qemu-img convert -f vmdk -O raw "$VMDK_FILE" disk.raw
-          
-          # Customize the OS
+
+          # --- UBUNTU 24.04 HOST FIXES ---
+          # 1. Disable the unprivileged user namespace restriction. 
+          # This allows 'passt' to create its network sandbox without crashing.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+          # 2. Grant the GHA runner direct access to KVM hardware acceleration.
+          sudo chmod 0666 /dev/kvm
+
           export LIBGUESTFS_BACKEND=direct
 
-          # FIX: Run as root (sudo -E) to bypass Ubuntu 24.04 AppArmor unprivileged userns 
-          # blocks that crash 'passt' networking, and to resolve KVM permission warnings.
-          sudo -E virt-customize -a disk.raw \
+          # Run normally without sudo.
+          # Added -v and -x flags for verbose debugging if 'passt' still fails.
+          virt-customize -v -x -a disk.raw \
             --network \
             --run-command "tdnf update -y && tdnf install git jq -y" \
             --install "docker,git,tar" \
@@ -95,10 +105,6 @@ jobs:
             --run-command "echo 'Custom Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123!
 
-          # Restore ownership of the modified disk to the GHA runner user
-          sudo chown $USER:$USER disk.raw
-
-          # Convert back to standard VMDK
           rm "$VMDK_FILE"
           qemu-img convert -f raw -O vmdk disk.raw "$VMDK_FILE"
           rm disk.raw
