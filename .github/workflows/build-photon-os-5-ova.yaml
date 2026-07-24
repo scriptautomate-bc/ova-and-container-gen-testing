@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Virtualization Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget
+          sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget isc-dhcp-client
 
           # FIX 1: Remove 'passt' to force libguestfs to use the reliable 'slirp' networking backend.
           # This entirely bypasses the AppArmor and "nobody" permission dropping crashes.
@@ -36,7 +36,7 @@ jobs:
 
       - name: Cache VMware ovftool
         id: cache-ovftool
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ovftool_dir
           key: ovftool-linux-${{ runner.os }}-v1
@@ -61,7 +61,7 @@ jobs:
 
       - name: Cache Base Photon OVA
         id: cache-photon-ova
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: base-photon.ova
           # The cache key is bound to the version, build, and hash. 
