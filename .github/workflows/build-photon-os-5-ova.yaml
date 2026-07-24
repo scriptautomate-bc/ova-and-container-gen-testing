@@ -84,14 +84,20 @@ jobs:
           
           # Customize the OS
           export LIBGUESTFS_BACKEND=direct
-          virt-customize -a disk.raw \
+
+          # FIX: Run as root (sudo -E) to bypass Ubuntu 24.04 AppArmor unprivileged userns 
+          # blocks that crash 'passt' networking, and to resolve KVM permission warnings.
+          sudo -E virt-customize -a disk.raw \
             --network \
             --run-command "tdnf update -y && tdnf install git jq -y" \
             --install "docker,git,tar" \
             --run-command "systemctl enable docker" \
             --run-command "echo 'Custom Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123!
-          
+
+          # Restore ownership of the modified disk to the GHA runner user
+          sudo chown $USER:$USER disk.raw
+
           # Convert back to standard VMDK
           rm "$VMDK_FILE"
           qemu-img convert -f raw -O vmdk disk.raw "$VMDK_FILE"
