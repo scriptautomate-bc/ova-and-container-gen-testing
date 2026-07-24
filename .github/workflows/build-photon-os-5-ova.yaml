@@ -113,7 +113,7 @@ jobs:
 
           # Convert back to standard VMDK
           rm "$VMDK_FILE"
-          qemu-img convert -f raw -O vmdk disk.raw "$VMDK_FILE"
+          qemu-img convert -c -f raw -O vmdk -o subformat=streamOptimized,compat6 disk.raw "$VMDK_FILE"
           rm disk.raw
 
       - name: Repackage OVA with ovftool
