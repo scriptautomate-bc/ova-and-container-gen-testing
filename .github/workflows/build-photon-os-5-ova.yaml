@@ -106,7 +106,10 @@ jobs:
             --copy-in ../container/install.sh:/ \
             --run-command "chmod +x /install.sh && /install.sh" \
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
-            --root-password password:changeme123!
+            --root-password password:changeme123! \
+            --run-command "tdnf clean all" \
+            --run-command "rm -f /install.sh" \
+            --run-command "fstrim -a"
 
           # Convert back to standard VMDK
           rm "$VMDK_FILE"
