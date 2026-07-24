@@ -6,6 +6,9 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   PHOTON_VERSION: "5.0"
   PHOTON_BUILD: "dde71ec57"
@@ -119,8 +122,23 @@ jobs:
           # Repackage: --lax ignores the ovf:size byte mismatch of the customized disk
           ovftool --lax "$OVF_FILE" custom-photon5.ova
 
-      - name: Upload to GitHub Releases
-        uses: softprops/action-gh-release@v3.0.2
-        with:
-          files: build-dir/custom-photon5.ova
-          draft: true
+      - name: Create Release and Upload OVA
+        env:
+          # The native GITHUB_TOKEN is automatically provided by Actions
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine the tag name based on the trigger type
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            RELEASE_TAG="${{ github.ref_name }}"
+          else
+            # Fallback for manual workflow_dispatch triggers on a branch
+            RELEASE_TAG="v${{ env.PHOTON_VERSION }}-build-${{ env.PHOTON_BUILD }}-run${{ github.run_number }}"
+          fi
+
+          echo "Creating draft release for tag: $RELEASE_TAG"
+
+          # Create the draft release, auto-generate notes, and upload the artifact in one command
+          gh release create "$RELEASE_TAG" build-dir/custom-photon5.ova \
+            --title "$RELEASE_TAG" \
+            --draft \
+            --generate-notes
