@@ -100,9 +100,7 @@ jobs:
           virt-customize -a disk.raw \
             --network \
             --run-command "tdnf update -y && tdnf install git jq -y" \
-            --install "docker,git,tar" \
-            --run-command "systemctl enable docker" \
-            --run-command "echo 'Custom Photon OS 5 Build' > /etc/motd" \
+            --run-command "echo 'Custom Salty Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123!
 
           # Convert back to standard VMDK
