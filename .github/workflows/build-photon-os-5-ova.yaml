@@ -120,8 +120,11 @@ jobs:
           # Sparsify to reclaim space
           virt-sparsify disk.raw disk_sparse.raw
           
-          # Delete the old VMDK, we don't want it anymore
-          rm "$VMDK_FILE" disk.raw
+          # Convert back to VMDK using the specific streamOptimized subformat
+          rm "$VMDK_FILE"
+          qemu-img convert -f raw -O vmdk -o subformat=streamOptimized disk_sparse.raw "$VMDK_FILE"
+          
+          rm disk.raw disk_sparse.raw
 
       - name: Repackage OVA with native ovftool conversion
         run: |
@@ -148,8 +151,6 @@ jobs:
           du -sh build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
           echo "======================================"
 
-          echo "Listing contents of the generated OVA:"
-          tar -tvf build-dir/custom-photon5.ova
           echo "Listing contents of the generated OVA:"
           tar -tvf build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
 
