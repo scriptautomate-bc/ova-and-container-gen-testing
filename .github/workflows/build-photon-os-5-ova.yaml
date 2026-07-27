@@ -25,17 +25,15 @@ jobs:
       - name: Install Virtualization Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget isc-dhcp-client
+          sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget isc-dhcp-client xmlstarlet
 
-          # FIX 1: Remove 'passt' to force libguestfs to use the reliable 'slirp' networking backend.
-          # This entirely bypasses the AppArmor and "nobody" permission dropping crashes.
+          # Force libguestfs to use the reliable 'slirp' networking backend
           sudo apt-get purge -y passt
 
           # Fix Ubuntu kernel permissions
           sudo chmod 644 /boot/vmlinuz-*
 
-          # FIX 2: Grant the GHA runner direct access to KVM hardware acceleration.
-          # This resolves the "user is not a member of the KVM group" warning and speeds up the build.
+          # Grant the GHA runner direct access to KVM hardware acceleration
           sudo chmod 0666 /dev/kvm
 
       - name: Cache VMware ovftool
@@ -110,23 +108,28 @@ jobs:
             --run-command "tdnf clean all" \
             --run-command "rm -f /install.sh"
             
-          # NEW: Use virt-sparsify to aggressively reclaim all zeroed/deleted blocks
-          # This actually shrinks the raw file size physically.
+          # Sparsify to reclaim space
           virt-sparsify disk.raw disk_sparse.raw
           
-          # Convert back to a standard, UNCOMPRESSED VMDK. 
-          # We must not use QEMU's -c flag here, as vSphere will reject it.
-          rm "$VMDK_FILE"
-          qemu-img convert -f raw -O vmdk disk_sparse.raw "$VMDK_FILE"
-          
-          rm disk.raw disk_sparse.raw
+          # Delete the old VMDK, we don't want it anymore
+          rm "$VMDK_FILE" disk.raw
 
-      - name: Repackage OVA with ovftool
+      - name: Repackage OVA with native ovftool conversion
         run: |
           cd build-dir
           OVF_FILE=$(ls *.ovf)
           rm -f *.mf
           
+          # Point the OVF descriptor to our new raw disk instead of the old VMDK
+          xmlstarlet ed -L \
+            -N ovf="http://schemas.dmtf.org/ovf/envelope/1" \
+            -u "//ovf:References/ovf:File/@ovf:href" \
+            -v "disk_sparse.raw" \
+            "$OVF_FILE"
+          
+          # Tell VMware's native ovftool to build the OVA. 
+          # It will automatically detect the .raw file, encode it as a native 
+          # streamOptimized VMDK, generate a correct manifest, and build the OVA.
           ovftool --lax "$OVF_FILE" custom-photon5.ova
 
       - name: Verify OVA Contents
