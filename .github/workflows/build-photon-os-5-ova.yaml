@@ -132,16 +132,7 @@ jobs:
           OVF_FILE=$(ls *.ovf)
           rm -f *.mf
           
-          # Point the OVF descriptor to our new raw disk instead of the old VMDK
-          xmlstarlet ed -L \
-            -N ovf="http://schemas.dmtf.org/ovf/envelope/1" \
-            -u "//ovf:References/ovf:File/@ovf:href" \
-            -v "disk_sparse.raw" \
-            "$OVF_FILE"
-          
-          # Tell VMware's native ovftool to build the OVA. 
-          # It will automatically detect the .raw file, encode it as a native 
-          # streamOptimized VMDK, generate a correct manifest, and build the OVA.
+          # Use ovftool to repackage the OVA. 
           ovftool --lax "$OVF_FILE" "custom-photon-${{ env.RELEASE_TAG }}.ova"
 
       - name: Verify OVA Contents
