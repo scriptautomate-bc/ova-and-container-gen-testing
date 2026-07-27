@@ -92,15 +92,15 @@ jobs:
           mkdir build-dir
           tar -xvf base-photon.ova -C build-dir
           cd build-dir
-
+          
           VMDK_FILE=$(ls *.vmdk)
-
+          
           # Convert to raw format for native manipulation
           qemu-img convert -f vmdk -O raw "$VMDK_FILE" disk.raw
-
+          
           export LIBGUESTFS_BACKEND=direct
-
-          # We can run this normally without sudo now, and without the debug flags.
+          
+          # Customize the disk and clean up the package caches
           virt-customize -a disk.raw \
             --network \
             --copy-in ../container/install.sh:/ \
@@ -108,24 +108,34 @@ jobs:
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123! \
             --run-command "tdnf clean all" \
-            --run-command "rm -f /install.sh" \
-            --run-command "fstrim -a"
-
-          # Convert back to standard VMDK
+            --run-command "rm -f /install.sh"
+            
+          # NEW: Use virt-sparsify to aggressively reclaim all zeroed/deleted blocks
+          # This actually shrinks the raw file size physically.
+          virt-sparsify disk.raw disk_sparse.raw
+          
+          # Convert back to a standard, UNCOMPRESSED VMDK. 
+          # We must not use QEMU's -c flag here, as vSphere will reject it.
           rm "$VMDK_FILE"
-          qemu-img convert -c -f raw -O vmdk -o subformat=streamOptimized,compat6 disk.raw "$VMDK_FILE"
-          rm disk.raw
+          qemu-img convert -f raw -O vmdk disk_sparse.raw "$VMDK_FILE"
+          
+          rm disk.raw disk_sparse.raw
 
       - name: Repackage OVA with ovftool
         run: |
           cd build-dir
           OVF_FILE=$(ls *.ovf)
-          
-          # Delete the old manifest so ovftool generates a fresh one
           rm -f *.mf
           
-          # Repackage: --lax ignores the ovf:size byte mismatch of the customized disk
-          ovftool --lax "$OVF_FILE" custom-photon5.ova
+          # NEW: Use --compress=9. This tells VMware's native ovftool to convert the 
+          # standard VMDK we just made into a highly compressed, 100% vSphere-compliant 
+          # streamOptimized VMDK inside the final OVA.
+          ovftool --lax --compress=9 "$OVF_FILE" custom-photon5.ova
+
+      - name: Verify OVA Contents
+        run: |
+          echo "Listing contents of the generated OVA:"
+          tar -tvf build-dir/custom-photon5.ova
 
       - name: Create Release and Upload OVA
         env:
