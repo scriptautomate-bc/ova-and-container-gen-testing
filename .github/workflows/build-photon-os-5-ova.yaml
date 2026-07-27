@@ -127,10 +127,7 @@ jobs:
           OVF_FILE=$(ls *.ovf)
           rm -f *.mf
           
-          # NEW: Use --compress=9. This tells VMware's native ovftool to convert the 
-          # standard VMDK we just made into a highly compressed, 100% vSphere-compliant 
-          # streamOptimized VMDK inside the final OVA.
-          ovftool --lax --compress=9 "$OVF_FILE" custom-photon5.ova
+          ovftool --lax "$OVF_FILE" custom-photon5.ova
 
       - name: Verify OVA Contents
         run: |
