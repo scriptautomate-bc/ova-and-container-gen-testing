@@ -22,10 +22,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7.0.1
 
+      - name: Set Release Tag
+        run: |
+          # Calculate the release tag early so we can use it in the filenames
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "RELEASE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "RELEASE_TAG=v${{ env.PHOTON_VERSION }}-build-${{ env.PHOTON_BUILD }}-run${{ github.run_number }}" >> $GITHUB_ENV
+          fi
+
       - name: Install Virtualization Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-utils libguestfs-tools qemu-system-x86 unzip wget isc-dhcp-client xmlstarlet
+          sudo apt-get install -y qemu-utils zip libguestfs-tools qemu-system-x86 unzip wget isc-dhcp-client xmlstarlet
 
           # Force libguestfs to use the reliable 'slirp' networking backend
           sudo apt-get purge -y passt
@@ -130,31 +139,40 @@ jobs:
           # Tell VMware's native ovftool to build the OVA. 
           # It will automatically detect the .raw file, encode it as a native 
           # streamOptimized VMDK, generate a correct manifest, and build the OVA.
-          ovftool --lax "$OVF_FILE" custom-photon5.ova
+          ovftool --lax "$OVF_FILE" "custom-photon-${{ env.RELEASE_TAG }}.ova"
 
       - name: Verify OVA Contents
         run: |
+          echo "======================================"
+          echo "Final Uncompressed OVA File Size:"
+          du -sh build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
+          echo "======================================"
+
           echo "Listing contents of the generated OVA:"
           tar -tvf build-dir/custom-photon5.ova
+          echo "Listing contents of the generated OVA:"
+          tar -tvf build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
 
       - name: Create Release and Upload OVA
         env:
-          # The native GITHUB_TOKEN is automatically provided by Actions
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Determine the tag name based on the trigger type
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            RELEASE_TAG="${{ github.ref_name }}"
-          else
-            # Fallback for manual workflow_dispatch triggers on a branch
-            RELEASE_TAG="v${{ env.PHOTON_VERSION }}-build-${{ env.PHOTON_BUILD }}-run${{ github.run_number }}"
-          fi
+          echo "Zipping OVA for GitHub Release (Windows-friendly)..."
+          # Compress the OVA into a standard .zip to bypass GitHub's 2GB file size limit
+          cd build-dir
+          zip -9 "custom-photon-${{ env.RELEASE_TAG }}.zip" "custom-photon-${{ env.RELEASE_TAG }}.ova"
+          cd ..
 
-          echo "Creating draft release for tag: $RELEASE_TAG"
+          echo "======================================"
+          echo "Final Zipped File Size:"
+          du -sh "build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip"
+          echo "======================================"
 
-          # Create the draft release, auto-generate notes, and upload the artifact in one command
-          gh release create "$RELEASE_TAG" build-dir/custom-photon5.ova \
-            --title "$RELEASE_TAG" \
+          echo "Creating draft release for tag: ${{ env.RELEASE_TAG }}"
+
+          # Upload the zipped artifact
+          gh release create "${{ env.RELEASE_TAG }}" "build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip" \
+            --title "${{ env.RELEASE_TAG }}" \
             --draft \
             --generate-notes
 
