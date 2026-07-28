@@ -6,12 +6,11 @@ echo "Starting installation..."
 tdnf update -y
 
 # Install required packages
-tdnf install -y git tar jq
+tdnf install -y git tar jq rpm
 
-# 1. Setup Salt RPM Repository (Substituting standard dnf instructions for tdnf)
-echo "Configuring Salt 3008.x repository..."
-rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub
-curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/3008.repo | tee /etc/yum.repos.d/salt.repo
+# 1. Setup Salt RPM Repository
+echo "Configuring Salt repository..."
+curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo
 
 # 2. Install Salt Master and Minion
 tdnf install -y salt-master salt-minion
