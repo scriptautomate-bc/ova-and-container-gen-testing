@@ -16,6 +16,28 @@ env:
   PHOTON_SHA512: "6bd6a307745adb00b8452013f2c308c9abefd24a9d82611e8a1551afb965873388ebde81a34296dc0ad2fa7f0f7b4cd3924701abde0c963ea40b363c444bb037"
 
 jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.14'
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Install and Run pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files || echo "Pre-commit warnings found."
+
+
   build-ova:
     runs-on: ubuntu-latest
     steps:
