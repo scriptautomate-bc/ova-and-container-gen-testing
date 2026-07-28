@@ -1,6 +1,6 @@
 # Salty VCF: Photon OS 5 Automation Image
 
-This repository builds and maintains a custom Photon OS 5 image pre-configured with [Salt 3008.x](https://saltproject.io/) and the `saltext-vcf` extension. 
+This repository builds and maintains a custom Photon OS 5 image pre-configured with [Salt 3008.x](https://saltproject.io/) and the `saltext-vcf` extension.
 
 The goal of this project is to provide a ready-to-deploy environment (both as a container and a Virtual Machine OVA) specifically targeted for managing and automating VMware Cloud Foundation (VCF) and vSphere infrastructure via VCF APIs.
 

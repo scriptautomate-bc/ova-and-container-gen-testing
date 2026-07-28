@@ -39,6 +39,7 @@ jobs:
 
 
   build-ova:
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -83,7 +84,7 @@ jobs:
             --repo scriptautomate-bc/ovftool-artifacts-mirror \
             --pattern "*.zip" \
             --dir .
-          
+
           unzip -q *.zip -d ovftool_dir/
           rm *.zip
 
@@ -97,7 +98,7 @@ jobs:
         uses: actions/cache@v6.1.0
         with:
           path: base-photon.ova
-          # The cache key is bound to the version, build, and hash. 
+          # The cache key is bound to the version, build, and hash.
           # If any env var changes, GHA will automatically start a fresh download.
           key: photon-ova-${{ env.PHOTON_VERSION }}-${{ env.PHOTON_BUILD }}-${{ env.PHOTON_SHA512 }}
 
@@ -121,14 +122,14 @@ jobs:
           mkdir build-dir
           tar -xvf base-photon.ova -C build-dir
           cd build-dir
-          
+
           VMDK_FILE=$(ls *.vmdk)
-          
+
           # Convert to raw format for native manipulation
           qemu-img convert -f vmdk -O raw "$VMDK_FILE" disk.raw
-          
+
           export LIBGUESTFS_BACKEND=direct
-          
+
           # Customize the disk and clean up the package caches
           virt-customize -a disk.raw \
             --network \
@@ -138,14 +139,14 @@ jobs:
             --root-password password:changeme123! \
             --run-command "tdnf clean all" \
             --run-command "rm -f /install.sh"
-            
+
           # Sparsify to reclaim space
           virt-sparsify disk.raw disk_sparse.raw
-          
+
           # Convert back to VMDK using the specific streamOptimized subformat
           rm "$VMDK_FILE"
           qemu-img convert -f raw -O vmdk -o subformat=streamOptimized disk_sparse.raw "$VMDK_FILE"
-          
+
           rm disk.raw disk_sparse.raw
 
       - name: Repackage OVA with native ovftool conversion
@@ -153,8 +154,8 @@ jobs:
           cd build-dir
           OVF_FILE=$(ls *.ovf)
           rm -f *.mf
-          
-          # Use ovftool to repackage the OVA. 
+
+          # Use ovftool to repackage the OVA.
           ovftool --lax "$OVF_FILE" "custom-photon-${{ env.RELEASE_TAG }}.ova"
 
       - name: Verify OVA Contents
@@ -191,6 +192,7 @@ jobs:
             --generate-notes
 
   build-container:
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

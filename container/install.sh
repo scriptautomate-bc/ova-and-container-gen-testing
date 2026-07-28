@@ -2,7 +2,6 @@
 set -e
 
 echo "Starting installation..."
-
 # Update the package index and upgrade existing packages
 tdnf update -y
 
