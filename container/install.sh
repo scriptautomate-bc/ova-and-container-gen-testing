@@ -31,29 +31,7 @@ echo "master: 127.0.0.1" > /etc/salt/minion.d/master.conf
 echo "Installing saltext-vcf..."
 salt-pip install saltext-vcf
 
-# 6. Accept Keys and Test Connection
-# We start the daemons in the background so this works within Docker and chroot builds
-echo "Starting daemons temporarily for key generation and acceptance..."
-/usr/bin/salt-master -d
-/usr/bin/salt-minion -d
-
-# Wait for the minion to spin up, generate keys, and check in with the master
-sleep 15
-
-# Accept the key
-echo "Accepting unaccepted keys..."
-salt-key -L
-salt-key -A -y
-
-# Validate connection
-echo "Testing minion connection..."
-salt '*' test.ping
-
-# Terminate background daemons so the build step exits cleanly
-pkill salt-minion || true
-pkill salt-master || true
-
-# 7. Enable Services (Conditional for OVA compatibility)
+# 6. Enable Services (Conditional for OVA compatibility)
 # Containers typically do not use systemctl, so we only enable if the command is available
 if command -v systemctl >/dev/null 2>&1; then
     echo "Enabling Salt services for OVA boot..."
