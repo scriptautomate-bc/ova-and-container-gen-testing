@@ -17,3 +17,9 @@ repos:
         language: system
         files: ^container/install\.sh$
         types: [shell]
+  - repo: https://github.com/warpnet/salt-lint
+    rev: 172f9121d82ff8452f7852877ccf34b33b50db8e
+    hooks:
+      - id: salt-lint
+        # This regex ensures it only runs on .sls files inside your srv/ directory
+        files: ^srv/.*\.sls$

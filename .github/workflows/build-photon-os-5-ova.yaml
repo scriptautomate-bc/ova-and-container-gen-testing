@@ -134,7 +134,9 @@ jobs:
           virt-customize -a disk.raw \
             --network \
             --copy-in ../container/install.sh:/ \
+            --copy-in ../srv:/srv \
             --run-command "chmod +x /install.sh && /install.sh" \
+            --run-command "chmod 644 -R /srv" \
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123! \
             --run-command "tdnf clean all" \
