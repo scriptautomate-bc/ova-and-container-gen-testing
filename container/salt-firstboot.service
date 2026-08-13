@@ -1,0 +1,14 @@
+[Unit]
+Description=Salt first-boot key generation and acceptance
+After=network-online.target salt-master.service salt-minion.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/salt-firstboot.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/salt-firstboot.sh
+ExecStartPost=/usr/bin/touch /var/lib/salt-firstboot.done
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
