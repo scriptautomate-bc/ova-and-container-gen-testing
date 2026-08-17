@@ -36,6 +36,7 @@ echo "interface: 127.0.0.1" > /etc/salt/master.d/interface.conf
 # 4b. Install the first-boot key generation/acceptance script (shared by the
 # OVA systemd unit and the container entrypoint; keys are never generated or
 # accepted here at build/image time, only at instance start).
+mkdir -p /usr/local/sbin
 install -m 0755 /salt-firstboot.sh /usr/local/sbin/salt-firstboot.sh
 
 # 5. Install the saltext-vcf extension via salt-pip
