@@ -10,7 +10,8 @@ LOCAL_PUBKEY="/etc/salt/pki/minion/minion.pub"
 MASTER_ACCEPTED="/etc/salt/pki/master/minions/${MINION_ID}"
 MASTER_PENDING="/etc/salt/pki/master/minions_pre/${MINION_ID}"
 
-if [ -f "$MASTER_ACCEPTED" ] && cmp -s "$LOCAL_PUBKEY" "$MASTER_ACCEPTED" 2>/dev/null; then
+# First check: If the accepted key exists, compare its contents directly
+if [ -f "$MASTER_ACCEPTED" ] && [ "$(cat "$LOCAL_PUBKEY" 2>/dev/null)" = "$(cat "$MASTER_ACCEPTED" 2>/dev/null)" ]; then
     echo "salt-firstboot: ${MINION_ID} already accepted, verifying connectivity only"
 else
     # Wait for the minion to generate its own keypair
@@ -36,7 +37,7 @@ else
     # The critical check: only accept if the pending key's bytes are IDENTICAL to
     # the key this specific minion process generated locally. Anything else
     # (a different minion racing to register under the same ID) is refused.
-    if ! cmp -s "$LOCAL_PUBKEY" "$MASTER_PENDING"; then
+    if [ "$(cat "$LOCAL_PUBKEY")" != "$(cat "$MASTER_PENDING")" ]; then
         echo "salt-firstboot: pending key for ${MINION_ID} does not match local minion's own key, refusing to accept" >&2
         exit 1
     fi
