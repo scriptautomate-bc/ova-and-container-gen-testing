@@ -136,7 +136,7 @@ jobs:
             --copy-in ../container/install.sh:/ \
             --copy-in ../container/salt-firstboot.sh:/ \
             --copy-in ../container/salt-firstboot.service:/ \
-            --copy-in ../container/srv:/ \
+            --copy-in ../container/srv:/var/srv \
             --run-command "chmod +x /install.sh && /install.sh" \
             --run-command "chmod 644 -R /srv" \
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
