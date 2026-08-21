@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write # Required to push to ghcr.io
@@ -203,18 +207,12 @@ jobs:
             --draft \
             --generate-notes
 
-      - name: Zip OVA for artifact upload
-        if: github.ref_type != 'tag'
-        run: |
-          cd build-dir
-          zip -9 "custom-photon-${{ env.RELEASE_TAG }}.zip" "custom-photon-${{ env.RELEASE_TAG }}.ova"
-
       - name: Upload OVA as CI artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: custom-photon-${{ env.RELEASE_TAG }}
-          path: build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip
+          path: build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
           retention-days: 2
 
   build-container:
