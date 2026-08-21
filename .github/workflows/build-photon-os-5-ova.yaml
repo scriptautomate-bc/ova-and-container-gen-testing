@@ -145,7 +145,8 @@ jobs:
             --copy-in ../container/install.sh:/ \
             --copy-in ../container/salt-firstboot.sh:/ \
             --copy-in ../container/salt-firstboot.service:/ \
-            --copy-in ../container/srv:/var/srv \
+            --copy-in ../container/srv/pillar:/var/srv \
+            --copy-in ../container/srv/salt:/var/srv \
             --run-command "chmod +x /install.sh && /install.sh" \
             --run-command "chown -R root:salt /var/srv" \
             --run-command "find /var/srv -type d -exec chmod 750 {} +" \
