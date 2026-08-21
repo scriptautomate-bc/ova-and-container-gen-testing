@@ -20,7 +20,6 @@ salt-minion --version
 # 3. Setup State Tree and Pillar pre-work
 echo "Setting up Salt directory structures..."
 mkdir -p /srv/salt /srv/pillar
-chown -R salt:salt /srv/salt /srv/pillar
 
 # 4. Configure Minion to target the local Master
 echo "Configuring minion..."

@@ -4,7 +4,14 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -41,6 +48,8 @@ jobs:
   build-ova:
     needs: [lint]
     runs-on: ubuntu-latest
+    # Skip this job for PRs from external forks to prevent failures on missing secrets
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout code
         uses: actions/checkout@v7.0.1
@@ -136,9 +145,12 @@ jobs:
             --copy-in ../container/install.sh:/ \
             --copy-in ../container/salt-firstboot.sh:/ \
             --copy-in ../container/salt-firstboot.service:/ \
-            --copy-in ../container/srv:/var/srv \
+            --copy-in ../container/srv/pillar:/var/srv \
+            --copy-in ../container/srv/salt:/var/srv \
             --run-command "chmod +x /install.sh && /install.sh" \
-            --run-command "chmod 644 -R /srv" \
+            --run-command "chown -R root:salt /var/srv" \
+            --run-command "find /var/srv -type d -exec chmod 750 {} +" \
+            --run-command "find /var/srv -type f -exec chmod 640 {} +" \
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123! \
             --run-command "tdnf clean all" \
@@ -196,18 +208,12 @@ jobs:
             --draft \
             --generate-notes
 
-      - name: Zip OVA for artifact upload
-        if: github.ref_type != 'tag'
-        run: |
-          cd build-dir
-          zip -9 "custom-photon-${{ env.RELEASE_TAG }}.zip" "custom-photon-${{ env.RELEASE_TAG }}.ova"
-
       - name: Upload OVA as CI artifact
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: custom-photon-${{ env.RELEASE_TAG }}
-          path: build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip
+          path: build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
           retention-days: 2
 
   build-container:
@@ -221,6 +227,8 @@ jobs:
         uses: docker/setup-buildx-action@v4.2.0
 
       - name: Login to GitHub Container Registry
+        # Only log in if we intend to push (i.e. not a PR)
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4.5.1
         with:
           registry: ghcr.io
@@ -241,6 +249,7 @@ jobs:
         uses: docker/build-push-action@v7.3.0
         with:
           context: ./container
-          push: true
+          # Only push if this workflow is NOT triggered by a PR
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
