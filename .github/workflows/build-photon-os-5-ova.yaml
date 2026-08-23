@@ -158,7 +158,7 @@ jobs:
             --copy-in ../container/srv/salt:/var/srv \
             --run-command "chmod +x /install.sh && /install.sh" \
             --run-command "chown -R root:salt /var/srv" \
-            --run-command "find /var/srv -type d -exec chmod 750 {} +" \
+            --run-command "find /var/srv -type d -exec chmod 2750 {} +" \
             --run-command "find /var/srv -type f -exec chmod 640 {} +" \
             --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
             --root-password password:changeme123! \
