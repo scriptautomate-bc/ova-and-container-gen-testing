@@ -21,6 +21,8 @@ env:
   PHOTON_VERSION: "5.0"
   PHOTON_BUILD: "dde71ec57"
   PHOTON_SHA512: "6bd6a307745adb00b8452013f2c308c9abefd24a9d82611e8a1551afb965873388ebde81a34296dc0ad2fa7f0f7b4cd3924701abde0c963ea40b363c444bb037"
+  OVF_TOOL_VERSION: "5.1.0-25410048"
+  OVF_TOOL_SHA256: "2c83970a212cc01262adb76ce3b9c52af396fad8340ff71acb749e33e86c8e33"
 
 jobs:
   lint:
@@ -82,20 +84,27 @@ jobs:
         uses: actions/cache@v6.1.0
         with:
           path: ovftool_dir
-          key: ovftool-linux-${{ runner.os }}-v1
+          key: ovftool-linux-${{ env.OVF_TOOL_VERSION }}
 
-      - name: Download and Extract ovftool
+      - name: Download ovftool
         if: steps.cache-ovftool.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.OVF_REPO_TOKEN }}
         run: |
-          gh release download v5.1.0 \
-            --repo scriptautomate-bc/ovftool-artifacts-mirror \
-            --pattern "*.zip" \
-            --dir .
+          pip install playwright
+          playwright install chromium
+          python scripts/download_ovftool.py ${{ env.OVF_TOOL_VERSION }}
 
-          unzip -q *.zip -d ovftool_dir/
-          rm *.zip
+      - name: Validate OVF Tool Checksum
+        if: steps.cache-ovftool.outputs.cache-hit != 'true'
+        run: |
+          # Verify the integrity of the downloaded zip. 
+          # Note: The two spaces between the hash and the filename are required by sha256sum
+          echo "${{ env.OVF_TOOL_SHA256 }}  VMware-ovftool-${{ env.OVF_TOOL_VERSION }}-lin.x86_64.zip" | sha256sum -c -
+
+      - name: Extract OVF Tool
+        if: steps.cache-ovftool.outputs.cache-hit != 'true'
+        run: |
+          unzip -q VMware-ovftool-${{ env.OVF_TOOL_VERSION }}-lin.x86_64.zip -d ovftool_dir/
+          rm VMware-ovftool-${{ env.OVF_TOOL_VERSION }}-lin.x86_64.zip
 
       - name: Add ovftool to PATH
         run: |
