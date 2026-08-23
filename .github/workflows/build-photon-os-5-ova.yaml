@@ -248,10 +248,10 @@ jobs:
         uses: docker/metadata-action@v6.2.0
         with:
           images: ghcr.io/${{ github.repository }}
-          # Generate tags based on git tags, or 'latest' for manual runs on main
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=ref,event=pr
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7.3.0
