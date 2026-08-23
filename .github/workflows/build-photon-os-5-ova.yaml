@@ -214,7 +214,6 @@ jobs:
           # Upload the zipped artifact
           gh release create "${{ env.RELEASE_TAG }}" "build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip" \
             --title "${{ env.RELEASE_TAG }}" \
-            --draft \
             --generate-notes
 
       - name: Upload OVA as CI artifact
