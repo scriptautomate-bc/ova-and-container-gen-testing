@@ -21,3 +21,29 @@ saltext.vcf:
     username: admin
     password: mypassword
     verify_ssl: false
+
+# Profiles are used in conjunction with NTP state.
+# It only requires the vcenter settings, unless working with an ESXi host not attached to a vCenter.
+  profiles:
+    myesxi_1.host:
+      esxi:
+        host: myesxi_1.host
+        username: root
+        password: mypassword
+        verify_ssl: False
+      vcenter:
+        host: myesxi_1.host
+        username: root
+        password: mypassword
+        verify_ssl: False
+    myesxi_2.host:
+      esxi:
+        host: myesxi_2.host
+        username: root
+        password: mypassword
+        verify_ssl: False
+      vcenter:
+        host: myesxi_2.host
+        username: root
+        password: mypassword
+        verify_ssl: False
