@@ -160,8 +160,8 @@ jobs:
             --run-command "chown -R root:salt /var/srv" \
             --run-command "find /var/srv -type d -exec chmod 2750 {} +" \
             --run-command "find /var/srv -type f -exec chmod 640 {} +" \
-            --run-command "echo 'Salty VCF Photon OS 5 Build' > /etc/motd" \
-            --root-password password:changeme123! \
+            --run-command "echo 'Open Salt VCF Appliance ${{ env.RELEASE_TAG }}' > /etc/motd" \
+            --root-password password:shessalty \
             --run-command "tdnf clean all" \
             --run-command "rm -f /install.sh /salt-firstboot.sh /salt-firstboot.service"
 
@@ -181,17 +181,17 @@ jobs:
           rm -f *.mf
 
           # Use ovftool to repackage the OVA.
-          ovftool --lax "$OVF_FILE" "custom-photon-${{ env.RELEASE_TAG }}.ova"
+          ovftool --name="Open Salt VCF Appliance ${{ env.RELEASE_TAG }}" --lax "$OVF_FILE" "open-salt-vcf-${{ env.RELEASE_TAG }}.ova"
 
       - name: Verify OVA Contents
         run: |
           echo "======================================"
           echo "Final Uncompressed OVA File Size:"
-          du -sh build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
+          du -sh build-dir/open-salt-vcf-${{ env.RELEASE_TAG }}.ova
           echo "======================================"
 
           echo "Listing contents of the generated OVA:"
-          tar -tvf build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
+          tar -tvf build-dir/open-salt-vcf-${{ env.RELEASE_TAG }}.ova
 
       - name: Create Release and Upload OVA
         if: github.ref_type == 'tag'
@@ -201,18 +201,18 @@ jobs:
           echo "Zipping OVA for GitHub Release (Windows-friendly)..."
           # Compress the OVA into a standard .zip to bypass GitHub's 2GB file size limit
           cd build-dir
-          zip -9 "custom-photon-${{ env.RELEASE_TAG }}.zip" "custom-photon-${{ env.RELEASE_TAG }}.ova"
+          zip -9 "open-salt-vcf-${{ env.RELEASE_TAG }}.zip" "open-salt-vcf-${{ env.RELEASE_TAG }}.ova"
           cd ..
 
           echo "======================================"
           echo "Final Zipped File Size:"
-          du -sh "build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip"
+          du -sh "build-dir/open-salt-vcf-${{ env.RELEASE_TAG }}.zip"
           echo "======================================"
 
           echo "Creating draft release for tag: ${{ env.RELEASE_TAG }}"
 
           # Upload the zipped artifact
-          gh release create "${{ env.RELEASE_TAG }}" "build-dir/custom-photon-${{ env.RELEASE_TAG }}.zip" \
+          gh release create "${{ env.RELEASE_TAG }}" "build-dir/open-salt-vcf-${{ env.RELEASE_TAG }}.zip" \
             --title "${{ env.RELEASE_TAG }}" \
             --generate-notes
 
@@ -220,8 +220,8 @@ jobs:
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: custom-photon-${{ env.RELEASE_TAG }}
-          path: build-dir/custom-photon-${{ env.RELEASE_TAG }}.ova
+          name: open-salt-vcf-${{ env.RELEASE_TAG }}
+          path: build-dir/open-salt-vcf-${{ env.RELEASE_TAG }}.ova
           retention-days: 2
 
   build-container:
