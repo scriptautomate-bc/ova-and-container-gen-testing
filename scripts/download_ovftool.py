@@ -2,8 +2,9 @@ import sys
 from playwright.sync_api import sync_playwright
 
 def download_ovf(version):
+    major_version = version.split("-")[0]
     filename = f"VMware-ovftool-{version}-lin.x86_64.zip"
-    url = "https://developer.broadcom.com/tools/open-virtualization-format-ovf-tool/latest"
+    url = f"https://developer.broadcom.com/tools/open-virtualization-format-ovf-tool/{major_version}"
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -27,6 +28,6 @@ def download_ovf(version):
         browser.close()
 
 if __name__ == "__main__":
-    # Use the passed argument, or default to the known 5.1.0 build
-    ovf_version = sys.argv[1] if len(sys.argv) > 1 else "5.1.0-25410048"
+    # Use the passed argument, or default to the known 9.1.1 build
+    ovf_version = sys.argv[1] if len(sys.argv) > 1 else "9.1.1-25678992"
     download_ovf(ovf_version)
