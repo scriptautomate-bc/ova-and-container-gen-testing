@@ -23,7 +23,7 @@ The OVA is exclusively targeted for VCF and vSphere deployments. It acts as a tu
 * **Download**: Pushing a `v*.*.*` tag creates a **draft** release on the [Releases](https://github.com/scriptautomate-bc/ova-and-container-gen-testing/releases) page with the OVA (zipped) attached. A maintainer must publish the draft (via the GitHub UI, or `gh release edit <tag> --draft=false`) before it's visible/downloadable to anyone without write access. Once published, download the ZIP associated with the tag and unzip to retrieve the `.ova` file.
 * **Test builds**: Manually triggering the workflow (`workflow_dispatch`, e.g. to validate changes before cutting a real tag) does not create a release. Instead, the built OVA is uploaded as a CI artifact (2-day retention) on that workflow run's "Artifacts" list, for internal testing only.
 * **Deploy**: Deploy directly into your vCenter environment.
-* **Credentials**: The default root password is `changeme123!` (Make sure to change this upon first login).
+* **Credentials**: The default root password is `shessalty` (Make sure to change this upon first login).
 
 ### 2. Container Image
 
